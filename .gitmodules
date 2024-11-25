@@ -1,0 +1,3 @@
+[submodule "Plugins/VRGestures"]
+	path = Plugins/VRGestures
+	url = https://github.com/psykoloGG/VRGestures
