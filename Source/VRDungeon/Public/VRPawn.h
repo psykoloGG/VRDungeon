@@ -4,6 +4,8 @@
 #include "GameFramework/Pawn.h"
 #include "VRPawn.generated.h"
 
+class AMovementWaypoint;
+
 UCLASS()
 class VRDUNGEON_API AVRPawn : public APawn
 {
@@ -21,12 +23,23 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
+	void GenerateWaypoints();
+	void CheckIfLookingInWaypointDirection();
+
+	UFUNCTION()
+	void Move();
+
+	float MoveGridSize = 300.0f;
+
+	UPROPERTY()
+	TArray<AMovementWaypoint*> AvailableWaypoints;
+	
 	UPROPERTY(VisibleAnywhere)
 	class USceneComponent* VRRoot;
 	
 	UPROPERTY(EditAnywhere)
 	class UCameraComponent* VRCamera;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY()
 	class UVRGesturesComponent* VRGesturesComponent;
 };
