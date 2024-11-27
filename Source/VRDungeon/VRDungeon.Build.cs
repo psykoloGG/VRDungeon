@@ -8,6 +8,6 @@ public class VRDungeon : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "XRBase", "VRGestures" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "XRBase", "VRGestures", "SpeechRecognition" });
 	}
 }

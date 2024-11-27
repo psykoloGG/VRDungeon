@@ -1,3 +1,6 @@
 [submodule "Plugins/VRGestures"]
 	path = Plugins/VRGestures
 	url = https://github.com/psykoloGG/VRGestures
+[submodule "Plugins/RuntimeSpeechRecognizer"]
+	path = Plugins/RuntimeSpeechRecognizer
+	url = https://github.com/gtreshchev/RuntimeSpeechRecognizer

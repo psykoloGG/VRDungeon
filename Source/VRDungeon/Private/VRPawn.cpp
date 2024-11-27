@@ -2,6 +2,7 @@
 
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "MovementWaypoint.h"
+#include "SpeechRecognitionSubsystem.h"
 #include "Camera/CameraComponent.h"
 #include "VRGesturesComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -19,6 +20,28 @@ AVRPawn::AVRPawn()
 	VRGesturesComponent = CreateDefaultSubobject<UVRGesturesComponent>(TEXT("VRGesturesComponent"));
 	VRGesturesComponent->VRCamera = VRCamera;
 	VRGesturesComponent->OnNodYes.AddDynamic(this, &AVRPawn::Move);
+
+	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleComponent"));
+	CapsuleComponent->SetupAttachment(VRRoot);
+	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	CapsuleComponent->SetCollisionObjectType(ECollisionChannel::ECC_Pawn);
+	CapsuleComponent->SetCollisionProfileName(TEXT("OverlapAll"));
+
+	PointLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("PointLight"));
+	PointLight->SetupAttachment(VRCamera);
+	PointLight->SetIntensity(3000.0f);
+	PointLight->AttenuationRadius = 1000.0f;
+	PointLight->SetVisibility(false);
+
+	static ConstructorHelpers::FClassFinder<AActor> ProjectileClassFinder(TEXT("/Game/Magic_Projectiles/MagicProjectiles/Blueprints/Fire/BP_Fire_Projectile.BP_Fire_Projectile_C"));
+	if (ProjectileClassFinder.Succeeded())
+	{
+		BPProjectileToSpawn = ProjectileClassFinder.Class;
+	}
+	else 
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not find BP_Fire_Projectile"));
+	}
 }
 
 void AVRPawn::BeginPlay()
@@ -31,6 +54,9 @@ void AVRPawn::BeginPlay()
 		VRCamera->bLockToHmd = true;
 		UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Stage);
 	}
+
+	USpeechRecognitionSubsystem* SpeechRecognitionSubsystem = GetWorld()->GetSubsystem<USpeechRecognitionSubsystem>();
+	SpeechRecognitionSubsystem->OnWordsSpoken.AddDynamic(this, &AVRPawn::WordsSpoken);
 
 	GenerateWaypoints();
 }
@@ -78,15 +104,23 @@ void AVRPawn::GenerateWaypoints()
 
 void AVRPawn::CheckIfLookingInWaypointDirection()
 {
+	if (bIsMoving)
+	{
+		return;
+	}
+	
 	FVector ForwardVector = VRCamera->GetForwardVector();
 	for (AMovementWaypoint* MovementWaypoint : AvailableWaypoints)
 	{
+		// Artificially increase height
 		FVector WaypointLocation = MovementWaypoint->GetActorLocation();
+		WaypointLocation.Z = VRCamera->GetComponentLocation().Z - 50.0f;
+		
 		FVector DirectionToWaypoint = WaypointLocation - VRCamera->GetComponentLocation();
 		DirectionToWaypoint.Normalize();
 		float DotProduct = FVector::DotProduct(ForwardVector, DirectionToWaypoint);
 		float AngleInDegrees = FMath::Acos(DotProduct) * 180.0f / PI;
-		if (AngleInDegrees < 45.0f)
+		if (AngleInDegrees < 30.0f)
 		{
 			MovementWaypoint->Activate();
 		}
@@ -97,12 +131,32 @@ void AVRPawn::CheckIfLookingInWaypointDirection()
 	}
 }
 
+void AVRPawn::WordsSpoken(FRecognisedPhrases Text)
+{
+	for (FString Phrase : Text.phrases)
+	{
+		if(Phrase == "flame")
+		{
+			CastFireball();
+		}
+		if(Phrase == "lux")
+		{
+			CastLight();
+		}
+	}
+}
+
 void AVRPawn::Move()
 {
-	// TODO: something with fade to black to prevent motion sickness
 	for (AMovementWaypoint* MovementWaypoint : AvailableWaypoints)
 	{
-		if (MovementWaypoint && MovementWaypoint->IsActive())
+		// This is not the way to do it, but whatever for now
+		if (!MovementWaypoint)
+		{
+			return;
+		}
+		
+		if (MovementWaypoint->IsActive())
 		{
 			FVector WaypointLocation = MovementWaypoint->GetActorLocation();
 
@@ -117,8 +171,32 @@ void AVRPawn::Move()
 			// Teleport player to next target
 			WaypointLocation.Z = GetRootComponent()->GetComponentLocation().Z;
 			SetActorLocation(WaypointLocation, false, nullptr, ETeleportType::TeleportPhysics);
+
 			
-			GenerateWaypoints();
 		}
+	}
+	GenerateWaypoints();
+}
+
+void AVRPawn::CastFireball()
+{
+	if (BPProjectileToSpawn)
+	{
+		FVector SpawnLocation = VRCamera->GetComponentLocation() + VRCamera->GetForwardVector() * 100.0f;
+		FRotator SpawnRotation = VRCamera->GetComponentRotation();
+		GetWorld()->SpawnActor<AActor>(BPProjectileToSpawn, SpawnLocation, SpawnRotation);
+	}
+}
+
+void AVRPawn::CastLight()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Casting light"));
+	if (!PointLight->IsVisible())
+	{
+		PointLight->SetVisibility(true);
+	}
+	else
+	{
+		PointLight->SetVisibility(false);
 	}
 }
