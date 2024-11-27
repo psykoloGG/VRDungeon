@@ -77,4 +77,4 @@ Plugins/**/Intermediate/*
 DerivedDataCache/*
 
 # Third Party stuff needs to be kept included
-!ThirdParty/*
+!ThirdParty/
