@@ -75,3 +75,6 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# Third Party stuff needs to be kept included
+!ThirdParty/*
